@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """KeySpaCy is a spaCy integration of KeyBERT by rewriting the embedding backend.
     It is designed to be a component of TRANSFORMER-BASED spacy pipeline, e.g., 
-    <en_core_web_trf> pre-trained pipeline. Unlike KeyBERT, we only use pre-computed
+    `en_core_web_trf` pre-trained pipeline. Unlike KeyBERT, we only use pre-computed
     token contextualized embeddings to measure doc-substring similarities (KeyBERT 
     compute document and keyphrase embeddings independently, resulting in recomputing overhead)."""
 
