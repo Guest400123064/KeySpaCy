@@ -17,7 +17,7 @@ import warnings
 from collections import defaultdict
 from operator import itemgetter
 
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
@@ -168,7 +168,7 @@ class KeywordExtractor:
         use_mmr: bool = False,
         diversity: float = 0.5,
         nr_candidates: int = 20,
-    ) -> Union[List[Tuple[str, float]], List[List[Tuple[str, float]]]]:
+    ) -> Tuple[List[Tuple[str, float]], Dict[str, List[List[Token]]]]:
 
         # Extract ngram embeddings
         vocab = self._count_vocab(doc, keyphrase_ngram_range)
