@@ -26,6 +26,9 @@ from spacy.language import Language
 from spacy.tokens import Doc, Span, Token
 
 
+component_name = "keyword_extractor"
+
+
 def mmr(
     doc_embedding: np.ndarray,
     word_embeddings: np.ndarray,
@@ -138,7 +141,7 @@ def max_sum_distance(
                 for idx in candidate]
 
 
-@Language.factory('keyword_extractor')
+@Language.factory(component_name)
 class KeywordExtractor:
 
     def __init__(self, name, nlp):

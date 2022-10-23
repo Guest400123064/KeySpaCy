@@ -37,7 +37,7 @@ text = """
 
 # Transformer-based spacy pipeline is required
 nlp = spacy.load('en_core_web_trf')
-nlp.add_pipe('keyword_extractor')
+nlp.add_pipe(keyspacy.component_name)
 
 # Add extraction extension by piping through `nlp`
 doc = nlp(text)
