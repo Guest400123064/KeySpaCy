@@ -181,8 +181,8 @@ class KeywordExtractor:
         for ng_normal, ng_spans in vocab.items():
             if len(ng_spans) >= min_df:
                 candidates.append(ng_normal)
-                candidate_embeddings.append(np.array([self.token_tensor(t)
-                                                for s in ng_spans for t in s]).mean(axis=0))
+                candidate_embeddings.append(np.nanmean([self.token_tensor(t)
+                                                for s in ng_spans for t in s], axis=0))
 
         # Reshape to have B x H
         doc_embedding        = self.doc_tensor(doc).reshape(1, -1)
@@ -236,26 +236,13 @@ class KeywordExtractor:
             other non-linear transformations, which results in that 
             Doc and Token embeddings resides in different sub-space."""
 
-        # Reuse span embedding
         return self.span_tensor(doc[:])
 
     def span_tensor(self, span: Span) -> np.ndarray:
         """Get the span embedding as the average of all
-            sub-word embeddings within the span."""
+            (normalized) token embedding within the span"""
 
-        aligns = span.doc._.trf_data.align
-        hidden = span.doc._.trf_data.tensors[0]
-
-        # Get alignment information for Span; flatten array for indexing.
-        #   Use `hidden.shape[-1]` to get embedding dimension (e.g., 768 for BERT)
-        sub_ix = aligns[span.start:span.end].data.flatten()
-        tensor = hidden.reshape(-1, hidden.shape[-1])[sub_ix]
-
-        # Try if using `cupy` backend
-        try:
-            return tensor.mean(axis=0).get()
-        except AttributeError:
-            return tensor.mean(axis=0)
+        return np.nanmean([self.token_tensor(t) for t in span], axis=0)
 
     def token_tensor(self, token: Token) -> np.ndarray:
         """Get the token embedding as the average of all sub-word embeddings"""
@@ -265,14 +252,20 @@ class KeywordExtractor:
 
         # Get alignment information for Token; flatten array for indexing.
         #   Use `hidden.shape[-1]` to get embedding dimension (e.g., 768 for BERT)
+        #   Return all NaN's if no alignment found (usually un-trimmed spaces)
         sub_ix = aligns[token.i].data.flatten()
+        if len(sub_ix) <= 0:
+            return np.empty(hidden.shape[-1]) * np.nan
+
         tensor = hidden.reshape(-1, hidden.shape[-1])[sub_ix]
 
         # Try if using `cupy` backend
         try:
-            return tensor.mean(axis=0).get()
+            ret = tensor.mean(axis=0).get()
         except AttributeError:
-            return tensor.mean(axis=0)
+            ret = tensor.mean(axis=0)
+
+        return ret / np.linalg.norm(ret)
 
     def _count_vocab(self, doc, keyphrase_ngram_range):
         """Create vocabulary to store """
@@ -286,6 +279,34 @@ class KeywordExtractor:
             vocab[ng_normal].append(ng)
 
         return vocab
+    
+    def _noun_chunks(
+        self,
+        doc: Doc,
+        *,
+        filter_stops: bool = True,
+        filter_punct: bool = True,
+        filter_email: bool = True,
+        filter_url:   bool = True,
+        filter_nums:  bool = False,
+    ) -> List[List[Token]]:
+        """Generate candidate tokens from noun_chunks."""
+        #   TODO: EXPERIMENTAL
+        
+        # Generate ngrams from filtered tokens only
+        def _rm_token(t: Token) -> bool:
+            """Combine into a predicate given the filter rule set"""
+            #   TODO: SHOULD HAVE SOME SEPARATE METHOD(S) FOR PREDICATE GENERATION
+
+            return (t.is_space
+                    or (t.like_email and filter_email)
+                    or (t.like_url   and filter_url)
+                    or (t.like_num   and filter_nums)
+                    or (t.is_stop    and filter_stops)
+                    or (t.is_punct   and filter_punct))
+        
+        return [[t for t in chunk if not _rm_token(t)] 
+                    for chunk in doc.noun_chunks]
 
     def _word_ngrams(
         self,
