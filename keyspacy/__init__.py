@@ -153,7 +153,6 @@ class KeywordExtractor:
         """Override `vector` attributes (for debugging purpose)"""
 
         doc.user_hooks['vector']       = self.doc_tensor
-        doc.user_span_hooks['vector']  = self.span_tensor
         doc.user_token_hooks['vector'] = self.token_tensor
 
         return doc
@@ -236,13 +235,7 @@ class KeywordExtractor:
             other non-linear transformations, which results in that 
             Doc and Token embeddings resides in different sub-space."""
 
-        return self.span_tensor(doc[:])
-
-    def span_tensor(self, span: Span) -> np.ndarray:
-        """Get the span embedding as the average of all
-            (normalized) token embedding within the span"""
-
-        return np.nanmean([self.token_tensor(t) for t in span], axis=0)
+        return np.nanmean([self.token_tensor(t) for t in doc if not t.is_stop], axis=0)
 
     def token_tensor(self, token: Token) -> np.ndarray:
         """Get the token embedding as the average of all sub-word embeddings"""
