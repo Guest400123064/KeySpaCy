@@ -266,6 +266,19 @@ class KeywordExtractor:
             ret = tensor.mean(axis=0)
 
         return ret / np.linalg.norm(ret)
+    
+    def _count_vocab(self, doc, keyphrase_ngram_range):
+        """Create vocabulary to store """
+
+        vocab = defaultdict(list)
+        analyze = functools.partial(self._word_ngrams, ngram_range=keyphrase_ngram_range)
+
+        # Map spans to keys with same (normalized) text form
+        for ng in analyze(doc):
+            ng_normal = self._normalize(ng)
+            vocab[ng_normal].append(ng)
+
+        return vocab
 
     def _noun_chunks(
         self,
